@@ -167,11 +167,6 @@ class Window(Frame):
                                 dic[targetObj] = 1
                                 listBlock.append(targetObj)
 
-                    """ if listBlock == listBlockBD:
-                        print (listBlock)
-                        
-                    if listBlock == listBlockHeader:
-                        print (listBlock) """
                     
                     ##siguiente linea        
                     line = fp.readline()
