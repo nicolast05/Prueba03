@@ -167,7 +167,6 @@ class Window(Frame):
                                 dic[targetObj] = 1
                                 listBlock.append(targetObj)
 
-                    
                     ##siguiente linea        
                     line = fp.readline()
                     cnt += 1
