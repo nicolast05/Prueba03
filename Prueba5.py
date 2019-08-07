@@ -55,6 +55,8 @@ and_ = 'and'
 type_ = 'type'
 drop = 'drop'
 procedure = 'procedure'
+
+create = 'create'
         
 class Window(Frame):
   
@@ -108,14 +110,16 @@ class Window(Frame):
         switchCommentOn = 'N'
         listBlockBD = [use]
         listBlockHeader = [if_,exists,from_,sysobjects,objectid_,and_,type_,drop,procedure]
+        listBlockBody = [create,procedure]
         dic = {}
         dicwords = {}
 
-        listConstants = [go,use,if_,exists,from_,sysobjects,objectid_,and_,type_,drop,procedure,store]
+        listConstants = [use,if_,exists,from_,sysobjects,objectid_,and_,type_,drop,procedure,store,create]
         listObjects = []
         listBlock = []
         conjBlockBD=set(listBlockBD)
         conjBlockHeader=set(listBlockHeader)
+        conjBlockBody=set(listBlockBody)
 
         try:
             ##con el nombre del archivo
@@ -130,18 +134,31 @@ class Window(Frame):
                     line = line.lower().replace(')',' ').replace('(',' ').replace('[',' ').replace(']',' ').replace('.',' ').replace("'",' ')
 
                     switchBlockOn = 'S'
-                    
                     listObjects.clear()
+
+                    if line == "\n":
+                        line = fp.readline()
+                        cnt += 1
+                        continue
                     
-                    for const in listConstants:
-                        startPosition = line.find(const)
-                        
-                        if startPosition >= 0:
-                            endPosition = line.find(space,startPosition)
-                            object_     = line[startPosition: endPosition]
+                    startPosition = line.find(go)
+                    
+                    if startPosition >= 0:
+                        endPosition = line.find(space,startPosition)
+                        object_     = line[startPosition: endPosition]
+                        if object_ == go:
                             listObjects.append(object_)
+                    else:
+                        for const in listConstants:
+                            startPosition = line.find(const)
                             
-                    ##print (listObjects)
+                            if startPosition >= 0:
+                                endPosition = line.find(space,startPosition)
+                                object_     = line[startPosition: endPosition]
+                                """ if object_ == const or const == store: """
+                                listObjects.append(object_)
+                            
+                    """ print (listObjects) """
 
                     if len(listObjects) == 1:
                         if listObjects[0] == go: 
@@ -150,10 +167,13 @@ class Window(Frame):
                             
                             if conjBlock == conjBlockBD:
                                 print(conjBlock)
-                                print(dic)
+                                """ print(dic) """
                             elif conjBlockHeader.issubset(conjBlock):
                                 print(conjBlock)
-                                print(dic)
+                                """ print(dic) """
+                            elif conjBlockBody.issubset(conjBlock):
+                                print(conjBlock)
+                                """ print(dic) """
 
                             switchBlockOn = 'N'
                             listBlock.clear()     
