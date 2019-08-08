@@ -22,17 +22,12 @@ import errno
 #Usuario por default
 user = getpass.getuser()
 
-##constantes
-store = 'usp_'
-exec_ = 'exec'
-grant = 'grant'
 select = 'select'
 workflow = 'n usp_'
         
 function = 'ufn_'
 equal = '='
 objectid_ = 'object_id'
-from_ = 'from'
 join = 'join'
 between = 'between'
 over = 'over'
@@ -42,6 +37,8 @@ coma = ','
 lineComment = '--'
 blockCommentOpen = '/*'
 blockCommentClose = '*/'
+
+##constantes
 
 space = ' '
 
@@ -57,6 +54,12 @@ drop = 'drop'
 procedure = 'procedure'
 
 create = 'create'
+store = 'usp_'
+exec_ = 'exec'
+grant = 'grant'
+execute = 'execute'
+on = 'on'
+to = 'to'
         
 class Window(Frame):
   
@@ -111,15 +114,17 @@ class Window(Frame):
         listBlockBD = [use]
         listBlockHeader = [if_,exists,from_,sysobjects,objectid_,and_,type_,drop,procedure]
         listBlockBody = [create,procedure]
+        listBlockFoot = [grant,execute,on,to]
         dic = {}
         dicwords = {}
 
-        listConstants = [use,if_,exists,from_,sysobjects,objectid_,and_,type_,drop,procedure,store,create]
         listObjects = []
+        listConstants = [use,if_,exists,from_,sysobjects,objectid_,and_,type_,drop,procedure,store,create,grant,execute,on,to]
         listBlock = []
         conjBlockBD=set(listBlockBD)
         conjBlockHeader=set(listBlockHeader)
         conjBlockBody=set(listBlockBody)
+        conjBlockFoot=set(listBlockFoot)
 
         try:
             ##con el nombre del archivo
@@ -136,7 +141,7 @@ class Window(Frame):
                     switchBlockOn = 'S'
                     listObjects.clear()
 
-                    if line == "\n":
+                    if line.strip() == "":
                         line = fp.readline()
                         cnt += 1
                         continue
@@ -144,24 +149,9 @@ class Window(Frame):
                     startPosition = line.find(go)
                     
                     if startPosition >= 0:
-                        endPosition = line.find(space,startPosition)
+                        endPosition = line.find(go[1],startPosition)
                         object_     = line[startPosition: endPosition]
                         if object_ == go:
-                            listObjects.append(object_)
-                    else:
-                        for const in listConstants:
-                            startPosition = line.find(const)
-                            
-                            if startPosition >= 0:
-                                endPosition = line.find(space,startPosition)
-                                object_     = line[startPosition: endPosition]
-                                """ if object_ == const or const == store: """
-                                listObjects.append(object_)
-                            
-                    """ print (listObjects) """
-
-                    if len(listObjects) == 1:
-                        if listObjects[0] == go: 
 
                             conjBlock = set(listBlock)
                             
@@ -174,9 +164,26 @@ class Window(Frame):
                             elif conjBlockBody.issubset(conjBlock):
                                 print(conjBlock)
                                 """ print(dic) """
+                            elif conjBlockFoot.issubset(conjBlock):
+                                print(conjBlock)
+                                """ print(dic) """
 
                             switchBlockOn = 'N'
-                            listBlock.clear()     
+                            listBlock.clear()
+
+                    else:
+                        for const in listConstants:
+                            startPosition = line.find(const)
+                            
+                            if startPosition >= 0:
+                                endPosition = line.find(space,startPosition)
+                                object_     = line[startPosition: endPosition]
+                                if object_ in listConstants:
+                                    listObjects.append(object_)
+                                elif const == store:
+                                    listObjects.append(object_)
+                            
+                    """ print (listObjects) """
 
                     if switchBlockOn == 'S':
                         for targetObj in listObjects:
