@@ -58,8 +58,8 @@ store = 'usp_'
 exec_ = 'exec'
 grant = 'grant'
 execute = 'execute'
-on = 'on'
-to = 'to'
+""" on = 'on '
+to = 'to ' """
         
 class Window(Frame):
   
@@ -114,12 +114,12 @@ class Window(Frame):
         listBlockBD = [use]
         listBlockHeader = [if_,exists,from_,sysobjects,objectid_,and_,type_,drop,procedure]
         listBlockBody = [create,procedure]
-        listBlockFoot = [grant,execute,on,to]
+        listBlockFoot = [grant,execute]
         dic = {}
         dicwords = {}
 
         listObjects = []
-        listConstants = [use,if_,exists,from_,sysobjects,objectid_,and_,type_,drop,procedure,store,create,grant,execute,on,to]
+        listConstants = [use,if_,exists,from_,sysobjects,objectid_,and_,type_,drop,procedure,store,create,grant,execute]
         listBlock = []
         conjBlockBD=set(listBlockBD)
         conjBlockHeader=set(listBlockHeader)
@@ -149,8 +149,8 @@ class Window(Frame):
                     startPosition = line.find(go)
                     
                     if startPosition >= 0:
-                        endPosition = line.find(go[1],startPosition)
-                        object_     = line[startPosition: endPosition]
+                        endPosition = line.find(go[len(go) - 1])
+                        object_     = line[startPosition: endPosition + 1]
                         if object_ == go:
 
                             conjBlock = set(listBlock)
