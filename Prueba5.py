@@ -157,7 +157,7 @@ class Window(Frame):
                             
                             if conjBlock == conjBlockBD:
                                 print(conjBlock)
-                                """ print(dic) """
+                                
                             elif conjBlockHeader.issubset(conjBlock):
                                 print(conjBlock)
                                 """ print(dic) """
