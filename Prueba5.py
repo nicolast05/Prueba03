@@ -54,7 +54,7 @@ drop = 'drop'
 procedure = 'procedure'
 
 create = 'create'
-store = 'usp_'
+usp = 'usp_'
 exec_ = 'exec'
 grant = 'grant'
 execute = 'execute'
@@ -119,7 +119,8 @@ class Window(Frame):
         dicwords = {}
 
         listObjects = []
-        listConstants = [use,if_,exists,from_,sysobjects,objectid_,and_,type_,drop,procedure,store,create,grant,execute]
+        listConstants = [use,if_,exists,from_,sysobjects,objectid_,and_,type_,drop,procedure,create,grant,execute]
+        listVariables = [usp]
         listBlock = []
         conjBlockBD=set(listBlockBD)
         conjBlockHeader=set(listBlockHeader)
@@ -180,8 +181,16 @@ class Window(Frame):
                                 object_     = line[startPosition: endPosition]
                                 if object_ in listConstants:
                                     listObjects.append(object_)
-                                elif const == store:
-                                    listObjects.append(object_)
+                                #elif const == store:
+                                #    listObjects.append(object_)
+
+                        for var in listVariables:
+                            startPosition = line.find(var)
+                                        
+                            if startPosition >= 0:
+                                endPosition = line.find(space,startPosition)
+                                object_     = line[startPosition: endPosition]
+                                listObjects.append(object_)
                             
                     """ print (listObjects) """
 
