@@ -58,8 +58,8 @@ usp = 'usp_'
 exec_ = 'exec'
 grant = 'grant'
 execute = 'execute'
-""" on = 'on '
-to = 'to ' """
+##on = 'on '
+##to = 'to '
         
 class Window(Frame):
   
@@ -116,16 +116,19 @@ class Window(Frame):
         listBlockBody = [create,procedure]
         listBlockFoot = [grant,execute]
         dic = {}
-        dicwords = {}
+        dicParameters = {}
 
         listObjects = []
         listConstants = [use,if_,exists,from_,sysobjects,objectid_,and_,type_,drop,procedure,create,grant,execute]
         listVariables = [usp]
+        listParameters = ['@']
         listBlock = []
         conjBlockBD=set(listBlockBD)
         conjBlockHeader=set(listBlockHeader)
         conjBlockBody=set(listBlockBody)
         conjBlockFoot=set(listBlockFoot)
+
+        listBlockParameters = []
 
         try:
             ##con el nombre del archivo
@@ -140,7 +143,7 @@ class Window(Frame):
                     line = line.lower().replace(')',' ').replace('(',' ').replace('[',' ').replace(']',' ').replace('.',' ').replace("'",' ')
 
                     switchBlockOn = 'S'
-                    listObjects.clear()
+                    #listObjects.clear()
 
                     if line.strip() == "":
                         line = fp.readline()
@@ -149,7 +152,7 @@ class Window(Frame):
                     
                     startPosition = line.find(go)
                     
-                    if startPosition >= 0:
+                    if startPosition >= 0 and line.endswith(go) == True:
                         endPosition = line.find(go[len(go) - 1])
                         object_     = line[startPosition: endPosition + 1]
                         if object_ == go:
@@ -161,9 +164,11 @@ class Window(Frame):
                                 
                             elif conjBlockHeader.issubset(conjBlock):
                                 print(conjBlock)
-                                """ print(dic) """
+                                print(conjBlock - conjBlockHeader)
+                                print(dic.keys())
                             elif conjBlockBody.issubset(conjBlock):
                                 print(conjBlock)
+                                print(dicParameters)
                                 """ print(dic) """
                             elif conjBlockFoot.issubset(conjBlock):
                                 print(conjBlock)
@@ -171,6 +176,7 @@ class Window(Frame):
 
                             switchBlockOn = 'N'
                             listBlock.clear()
+                            listBlockParameters.clear()
 
                     else:
                         for const in listConstants:
@@ -180,9 +186,8 @@ class Window(Frame):
                                 endPosition = line.find(space,startPosition)
                                 object_     = line[startPosition: endPosition]
                                 if object_ in listConstants:
-                                    listObjects.append(object_)
-                                #elif const == store:
-                                #    listObjects.append(object_)
+                                    #listObjects.append(object_)
+                                    listBlock.append(object_)
 
                         for var in listVariables:
                             startPosition = line.find(var)
@@ -190,18 +195,36 @@ class Window(Frame):
                             if startPosition >= 0:
                                 endPosition = line.find(space,startPosition)
                                 object_     = line[startPosition: endPosition]
-                                listObjects.append(object_)
+                                #listObjects.append(object_)
+                                if object_ in listBlock:
+                                    dic[object_] += 1
+                                else:
+                                    dic[object_] = 1
+                                    listBlock.append(object_)
+
+                        for par in listParameters:
+                            startPosition = line.find(par)
+                                        
+                            if startPosition >= 0:
+                                endPosition = line.find(space,startPosition)
+                                object_     = line[startPosition: endPosition]
+                                #listObjects.append(object_)
+                                if object_ in listBlockParameters:
+                                    dicParameters[object_] += 1
+                                else:
+                                    dicParameters[object_] = 1
+                                    listBlockParameters.append(object_)
                             
                     """ print (listObjects) """
 
-                    if switchBlockOn == 'S':
+                    """ if switchBlockOn == 'S':
                         for targetObj in listObjects:
 
                             if targetObj in listBlock:
                                 dic[targetObj] += 1
                             else:
                                 dic[targetObj] = 1
-                                listBlock.append(targetObj)
+                                listBlock.append(targetObj) """
 
                     ##siguiente linea        
                     line = fp.readline()
