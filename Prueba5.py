@@ -152,9 +152,9 @@ class Window(Frame):
                     
                     startPosition = line.find(go)
                     
-                    if startPosition >= 0 and line.endswith(go) == True:
-                        endPosition = line.find(go[len(go) - 1])
-                        object_     = line[startPosition: endPosition + 1]
+                    if startPosition >= 0:# and line.endswith(go) == True:
+                        #endPosition = line.find(go[len(go) - 1])
+                        object_     = line.strip()
                         if object_ == go:
 
                             conjBlock = set(listBlock)
