@@ -123,10 +123,13 @@ class Window(Frame):
                                            title="Selección de Archivo")
 
         switchCommentOn = 'N'
+        flagBlockBD = 'N'
         listBlockBD = [use, database]
         listBlockHeader = [if_, exists, from_, sysobjects, objectid_, and_, type_, drop, procedure]
         listBlockBody = [create, procedure]
         listBlockFoot = [grant, execute]
+
+        listBlockMerge = [listBlockHeader,listBlockBody,listBlockFoot]
 
         dic = {}
         dicBlock = {}
@@ -172,6 +175,7 @@ class Window(Frame):
                         conjBlock = set(listBlock)
 
                         if conjBlock == conjBlockBD:
+                            flagBlockBD = 'S'
                             print(conjBlock)
                         elif conjBlockHeader.issubset(conjBlock):
                             print(conjBlock)
@@ -181,7 +185,7 @@ class Window(Frame):
                             print(conjBlock)
 
 
-                        print (listBlockDescriptions)
+                        #print (listBlockDescriptions)
                         
                         listBlock.clear()  # limpiamos la lista por bloque
                         #listBlockParameters.clear()
@@ -213,35 +217,43 @@ class Window(Frame):
 
                                 switchCommentOn = 'S'
                         
+                        if flagBlockBD == 'N':
+                            for const in listBlockBD:
+                                startPosition = line.find(const, beg)
+                                while startPosition >= 0:
+                                    endPosition = line.find(space, startPosition)
+                                    object_ = line[startPosition: endPosition]
+                                    if object_ in listBlockBD:
+                                        # listObjects.append(object_)
+                                        if object_ in listBlock:
+                                            dicBlock[object_] += 1
+                                        else:
+                                            dicBlock[object_] = 1
+                                            listBlock.append(object_)     
 
-                        for const in listConstants:
-                            startPosition = line.find(const, beg)
-                            while startPosition >= 0:
-                                endPosition = line.find(space, startPosition)
-                                object_ = line[startPosition: endPosition]
-                                if object_ in listConstants:
-                                    # listObjects.append(object_)
-                                    if object_ in listBlock:
-                                        dicBlock[object_] += 1
-                                    else:
-                                        dicBlock[object_] = 1
-                                        listBlock.append(object_)     
+                                    startPosition = line.find(const, endPosition + 1)
+                            
+                            line = fp.readline()
+                            continue
+                        
+                        for target in listBlockMerge:
+                            listFusion = target + listStatements
 
-                                startPosition = line.find(const, endPosition + 1)
+                            for const in listFusion:
+                                startPosition = line.find(const, beg)
+                                while startPosition >= 0:
+                                    endPosition = line.find(space, startPosition)
+                                    object_ = line[startPosition: endPosition]
+                                    
+                                    if object_ in target or const in listStatements:
+                                        if object_ in listBlock:
+                                            dicBlock[object_] += 1
+                                        else:
+                                            dicBlock[object_] = 1
+                                            listBlock.append(object_)
+                                    
+                                    startPosition = line.find(const, endPosition + 1)
 
-                        for var in listStatements:
-                            startPosition = line.find(var, beg)
-                            while startPosition >= 0:
-                                endPosition = line.find(space, startPosition)
-                                object_ = line[startPosition: endPosition]
-                                # listObjects.append(object_)
-                                if object_ in listBlock:
-                                    dic[object_] += 1
-                                else:
-                                    dic[object_] = 1
-                                    listBlock.append(object_)
-
-                                startPosition = line.find(var, endPosition + 1)
 
 #                        for par in listParameters:
 #                            startPosition = line.find(par)
