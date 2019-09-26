@@ -19,3 +19,12 @@ for i in range(0,10):
         a_list.remove(a_list[0])
         listoflists.append((list(a_list), a_list[0]))
 print(listoflists)
+
+
+def funExplorer(listZ,listY):
+    listN = listZ + listY
+    return listN
+
+listH = [1,2,3]
+listR = funExplorer(listH,listH)
+print (listR)

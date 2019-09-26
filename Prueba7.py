@@ -72,6 +72,13 @@ fecha = 'fecha'
 
 database = 'bdoperaciones'
 
+listBlockBD = [use, database]
+listBlockHeader = [if_, exists, from_, sysobjects, objectid_, and_, type_, drop, procedure]
+listBlockBody = [create, procedure]
+listBlockFoot = [grant, execute]
+listStatements = [usp]
+listDescriptions = [datos, generales, parametros, control, version, historial, autor, fecha]
+
 class Window(Frame):
 
     # Inicialización
@@ -124,24 +131,20 @@ class Window(Frame):
 
         switchCommentOn = 'N'
         flagBlockBD = 'N'
-        listBlockBD = [use, database]
-        listBlockHeader = [if_, exists, from_, sysobjects, objectid_, and_, type_, drop, procedure]
-        listBlockBody = [create, procedure]
-        listBlockFoot = [grant, execute]
+        
+        listBlockMerge = [listBlockHeader,listBlockBody,listBlockFoot,listStatements]
 
-        listBlockMerge = [listBlockHeader,listBlockBody,listBlockFoot]
-
-        dic = {}
         dicBlock = {}
+        dicReport = {}
 #        dicParameters = {}
         dicBlockDescriptions = {}
 
 #        listObjects = []
         listConstants = [use, if_, exists, from_, sysobjects, objectid_, and_, type_, drop, procedure, create, grant, execute]
-        listStatements = [usp]
+        
 #        listParameters = ['@']
-        listDescriptions = [datos, generales, parametros, control, version, historial, autor, fecha]
-        listBlock = []
+        
+#        listBlock = []
         conjBlockBD = set(listBlockBD)
         conjBlockHeader = set(listBlockHeader)
         conjBlockBody = set(listBlockBody)
@@ -172,7 +175,7 @@ class Window(Frame):
 
                     if strippedLine == go:
 
-                        conjBlock = set(listBlock)
+                        conjBlock = set(dicBlock.keys())
 
                         if conjBlock == conjBlockBD:
                             flagBlockBD = 'S'
@@ -184,12 +187,18 @@ class Window(Frame):
                         elif conjBlockFoot.issubset(conjBlock):
                             print(conjBlock)
 
+                        for key in list(conjBlock):
+                            if key in listConstants:
+                                continue
+                            else:
+                                if key in dicReport.keys():
+                                    dicReport[key] += dicBlock.get(key)
+                                else:
+                                    dicReport[key] = dicBlock.get(key)
 
-                        #print (listBlockDescriptions)
-                        
-                        listBlock.clear()  # limpiamos la lista por bloque
-                        #listBlockParameters.clear()
-                        #listBlockDescriptions.clear()
+                        dicBlock.clear()  
+                        #dicBlockDescriptions.clear()
+                        print(dicReport)
 
                     else:
 
@@ -200,75 +209,17 @@ class Window(Frame):
                             if indexBlockComentClose >= 0:
                                 switchCommentOn = 'N'
                             else:
-                                for const in listDescriptions:
-                                    startPosition = line.find(const, beg)
-                                    while startPosition >= 0:
-                                        endPosition = line.find(space, startPosition)
-                                        object_ = line[startPosition: endPosition]
-                                        if object_ in listDescriptions:
-                                            # listObjects.append(object_)
-                                            if object_ in listBlockDescriptions:
-                                                dicBlockDescriptions[object_] += 1
-                                            else:
-                                                dicBlockDescriptions[object_] = 1
-                                                listBlockDescriptions.append(object_)
-
-                                        startPosition = line.find(const, endPosition + 1)
-
+                                #dicBlockDescriptions = processLine(line,listDescriptions,dicBlockDescriptions)
                                 switchCommentOn = 'S'
                         
                         if flagBlockBD == 'N':
-                            for const in listBlockBD:
-                                startPosition = line.find(const, beg)
-                                while startPosition >= 0:
-                                    endPosition = line.find(space, startPosition)
-                                    object_ = line[startPosition: endPosition]
-                                    if object_ in listBlockBD:
-                                        # listObjects.append(object_)
-                                        if object_ in listBlock:
-                                            dicBlock[object_] += 1
-                                        else:
-                                            dicBlock[object_] = 1
-                                            listBlock.append(object_)     
-
-                                    startPosition = line.find(const, endPosition + 1)
-                            
+                            dicBlock = processLine(line,listBlockBD,dicBlock)
                             line = fp.readline()
                             continue
                         
                         for target in listBlockMerge:
-                            listFusion = target + listStatements
-
-                            for const in listFusion:
-                                startPosition = line.find(const, beg)
-                                while startPosition >= 0:
-                                    endPosition = line.find(space, startPosition)
-                                    object_ = line[startPosition: endPosition]
-                                    
-                                    if object_ in target or const in listStatements:
-                                        if object_ in listBlock:
-                                            dicBlock[object_] += 1
-                                        else:
-                                            dicBlock[object_] = 1
-                                            listBlock.append(object_)
-                                    
-                                    startPosition = line.find(const, endPosition + 1)
-
-
-#                        for par in listParameters:
-#                            startPosition = line.find(par)
-#                            while startPosition >= 0:
-#                                endPosition = line.find(space, startPosition)
-#                                object_ = line[startPosition: endPosition]
-#                                # listObjects.append(object_)
-#                                if object_ in listBlockParameters:
-#                                    dicParameters[object_] += 1
-#                                else:
-#                                    dicParameters[object_] = 1
-#                                    listBlockParameters.append(object_)
-#
-#                                startPosition = line.find(par, endPosition + 1)
-
+                            dicBlock = processLine(line,target,dicBlock)
+                            
                     # siguiente linea
                     line = fp.readline()
                     cnt += 1
@@ -277,22 +228,21 @@ class Window(Frame):
             if e.errno == errno.ENOENT:
                 messagebox.showwarning("Warning", "File not found / File not selected")
 
-def process(line,listMain,listAux,listResult,dicResult):
-    listMainAux = listMain + listAux
-    for const in listMainAux:
+def processLine(line,listMain,dicResult):
+    #listMainAux = listMain + listStatements
+    for const in listMain:
         startPosition = line.find(const, beg)
         while startPosition >= 0:
             endPosition = line.find(space, startPosition)
             object_ = line[startPosition: endPosition]                                    
-            if object_ in listMain or const in listAux:
-                if object_ in listResult:
+            if object_ in listMain or const in listStatements:
+                if object_ in dicResult.keys():
                     dicResult[object_] += 1
                 else:
-                    dicResult[object_] = 1
-                    listResult.append(object_)                            
+                    dicResult[object_] = 1                           
             startPosition = line.find(const, endPosition + 1)
 
-    return listResult,dicResult
+    return dicResult
 
 def main():
 
