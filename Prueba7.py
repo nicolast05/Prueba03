@@ -13,11 +13,13 @@ from tkinter import NONE
 from tkinter import BOTH
 from tkinter import messagebox
 from tkinter import END
+#from tkinter import Treeview
 import tkinter as tk
 import tkinter.filedialog as fdialog
 import getpass
 import os
 import errno
+import unicodedata
 
 # Usuario por default
 user = getpass.getuser()
@@ -112,6 +114,7 @@ class Window(Frame):
         self.lista = Listbox(self.master, font=("Helvetica", 8), borderwidth=0, activestyle=NONE, yscrollcommand=self.scrollbar.set)
         self.lista.pack(fill=BOTH, expand=1)
         self.scrollbar.config(command=self.lista.yview)
+        
 
     # Funcion para cerrar la app
     def client_exit(self):
@@ -131,6 +134,8 @@ class Window(Frame):
 
         switchCommentOn = 'N'
         flagBlockBD = 'N'
+        flagBlock = ''
+        observation = ''
         
         listBlockMerge = [listBlockHeader,listBlockBody,listBlockFoot,listStatements]
 
@@ -141,7 +146,7 @@ class Window(Frame):
 
 #        listObjects = []
         listConstants = [use, if_, exists, from_, sysobjects, objectid_, and_, type_, drop, procedure, create, grant, execute]
-        
+        conjConstants = set(listConstants)
 #        listParameters = ['@']
         
 #        listBlock = []
@@ -177,32 +182,56 @@ class Window(Frame):
 
                         conjBlock = set(dicBlock.keys())
 
-                        if conjBlock == conjBlockBD:
+                        if conjBlockBD.issubset(conjBlock):
+                            flagBlock = 'S'
                             flagBlockBD = 'S'
+                            countObject = 0
                             print(conjBlock)
                         elif conjBlockHeader.issubset(conjBlock):
+                            flagBlock = 'H'
+                            countObject = 2
+                            conjBlock = conjBlock - conjConstants
                             print(conjBlock)
                         elif conjBlockBody.issubset(conjBlock):
+                            flagBlock = 'B'
+                            countObject = 1
+                            conjBlock = conjBlock - conjConstants
                             print(conjBlock)
                         elif conjBlockFoot.issubset(conjBlock):
+                            flagBlock = 'F'
+                            countObject = 1
+                            conjBlock = conjBlock - conjConstants
                             print(conjBlock)
+                        else:
+                            observation = "Bloque incompleto"
 
-                        for key in list(conjBlock):
-                            if key in listConstants:
-                                continue
+                        if len(conjBlock) == 1:
+                            
+                            keya = ' '.join(map(str, conjBlock))
+                            if countObject != dicBlock[keya]:
+                                observation = "Bloque incompleto"
+
+                            if observation == "":
+                                self.lista.insert(END, ' '.join(map(str, conjBlock)))
+                                self.lista.itemconfigure(END, fg="#00aa00")
+                                
                             else:
-                                if key in dicReport.keys():
-                                    dicReport[key] += dicBlock.get(key)
-                                else:
-                                    dicReport[key] = dicBlock.get(key)
+                                self.lista.insert(END, ' '.join(map(str, conjBlock)) + " " + observation)
+                                self.lista.itemconfigure(END, fg="#ff0000")
+                        else:
+                            if flagBlock != 'S':
+                                observation = "Bloque irregular"
+                                self.lista.insert(END, ' '.join(map(str, conjBlock)) + " " + observation)
+                                self.lista.itemconfigure(END, fg="#ff0000")
 
                         dicBlock.clear()  
                         #dicBlockDescriptions.clear()
-                        print(dicReport)
+                        #print(dicReport)
 
                     else:
 
                         indexBlockComentOpen = line.find(blockCommentOpen, beg)
+                        indexLineComent = line.find(lineComment, beg)
 
                         if indexBlockComentOpen >= 0 or switchCommentOn == 'S':
                             indexBlockComentClose = line.find(blockCommentClose, beg)
@@ -211,14 +240,16 @@ class Window(Frame):
                             else:
                                 #dicBlockDescriptions = processLine(line,listDescriptions,dicBlockDescriptions)
                                 switchCommentOn = 'S'
-                        
-                        if flagBlockBD == 'N':
+                        elif indexLineComent >= 0:
+                            line = fp.readline()
+                            continue
+                        elif flagBlockBD == 'N':
                             dicBlock = processLine(line,listBlockBD,dicBlock)
                             line = fp.readline()
                             continue
-                        
-                        for target in listBlockMerge:
-                            dicBlock = processLine(line,target,dicBlock)
+                        else:
+                            for target in listBlockMerge:
+                                dicBlock = processLine(line,target,dicBlock)
                             
                     # siguiente linea
                     line = fp.readline()
@@ -244,8 +275,11 @@ def processLine(line,listMain,dicResult):
 
     return dicResult
 
-def main():
+def deleteAccent(lineText):
+    s = ''.join((c for c in unicodedata.normalize('NFD',lineText) if unicodedata.category(c) != 'Mn'))
+    return s
 
+def main():
     root = tk.Tk()
     root.iconbitmap('kms.ico')
     root.geometry("400x300+300+300")
