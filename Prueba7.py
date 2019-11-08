@@ -135,7 +135,7 @@ class Window(Frame):
         switchCommentOn = 'N'
         flagBlockBD = 'N'
         flagBlock = ''
-        observation = ''
+        countBlock = 0
         
         listBlockMerge = [listBlockHeader,listBlockBody,listBlockFoot,listStatements]
 
@@ -178,8 +178,12 @@ class Window(Frame):
                         cnt += 1
                         continue
 
+                    if flagBlockBD == 'N' and countBlock >= 1:
+                        break
+
                     if strippedLine == go:
 
+                        observation = ''
                         conjBlock = set(dicBlock.keys())
 
                         if conjBlockBD.issubset(conjBlock):
@@ -190,27 +194,26 @@ class Window(Frame):
                         elif conjBlockHeader.issubset(conjBlock):
                             flagBlock = 'H'
                             countObject = 2
-                            conjBlock = conjBlock - conjConstants
                             print(conjBlock)
                         elif conjBlockBody.issubset(conjBlock):
                             flagBlock = 'B'
                             countObject = 1
-                            conjBlock = conjBlock - conjConstants
                             print(conjBlock)
                         elif conjBlockFoot.issubset(conjBlock):
                             flagBlock = 'F'
                             countObject = 1
-                            conjBlock = conjBlock - conjConstants
                             print(conjBlock)
                         else:
+                            countObject = 0
                             observation = "Bloque incompleto"
+
+                        conjBlock = conjBlock - conjConstants
+
+                        if flagBlockBD == 'N':
+                            observation = "(Bloque BD) irregular"
 
                         if len(conjBlock) == 1:
                             
-                            keya = ' '.join(map(str, conjBlock))
-                            if countObject != dicBlock[keya]:
-                                observation = "Bloque incompleto"
-
                             if observation == "":
                                 self.lista.insert(END, ' '.join(map(str, conjBlock)))
                                 self.lista.itemconfigure(END, fg="#00aa00")
@@ -219,20 +222,28 @@ class Window(Frame):
                                 self.lista.insert(END, ' '.join(map(str, conjBlock)) + " " + observation)
                                 self.lista.itemconfigure(END, fg="#ff0000")
                         else:
-                            if flagBlock != 'S':
-                                observation = "Bloque irregular"
-                                self.lista.insert(END, ' '.join(map(str, conjBlock)) + " " + observation)
-                                self.lista.itemconfigure(END, fg="#ff0000")
+                            observation = "Bloque irregular"
+                            
+                            self.lista.insert(END, ' '.join(map(str, conjBlock)) + " " + observation)
+                            self.lista.itemconfigure(END, fg="#ff0000")
 
                         dicBlock.clear()  
                         #dicBlockDescriptions.clear()
                         #print(dicReport)
-
+                        countBlock += 1
                     else:
+                        
+                        if flagBlockBD == 'N':
+                            dicBlock = processLine(line,listBlockBD,dicBlock)
+                            line = fp.readline()
+                            continue
+                        
+                        indexLineComent = line.find(lineComment, beg)
+                        if indexLineComent >= 0:
+                            line = fp.readline()
+                            continue
 
                         indexBlockComentOpen = line.find(blockCommentOpen, beg)
-                        indexLineComent = line.find(lineComment, beg)
-
                         if indexBlockComentOpen >= 0 or switchCommentOn == 'S':
                             indexBlockComentClose = line.find(blockCommentClose, beg)
                             if indexBlockComentClose >= 0:
@@ -240,13 +251,6 @@ class Window(Frame):
                             else:
                                 #dicBlockDescriptions = processLine(line,listDescriptions,dicBlockDescriptions)
                                 switchCommentOn = 'S'
-                        elif indexLineComent >= 0:
-                            line = fp.readline()
-                            continue
-                        elif flagBlockBD == 'N':
-                            dicBlock = processLine(line,listBlockBD,dicBlock)
-                            line = fp.readline()
-                            continue
                         else:
                             for target in listBlockMerge:
                                 dicBlock = processLine(line,target,dicBlock)
