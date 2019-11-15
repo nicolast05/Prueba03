@@ -134,8 +134,10 @@ class Window(Frame):
 
         switchCommentOn = 'N'
         flagBlockBD = 'N'
-        flagBlock = ''
+        flagBlockES = ''
         countBlock = 0
+        countLine = 0
+        countObject = 0
         
         listBlockMerge = [listBlockHeader,listBlockBody,listBlockFoot,listStatements]
 
@@ -163,8 +165,7 @@ class Window(Frame):
             with open(filepath) as fp:
                 # obtenemos la primera linea
                 line = fp.readline()
-                cnt = 1
-
+                
                 # mientras exista una linea
                 while line:
                     # damos formato estandar a la linea reemplazando )([].' por un espacio
@@ -175,7 +176,7 @@ class Window(Frame):
 
                     if strippedLine == "":
                         line = fp.readline()
-                        cnt += 1
+                        countLine += 1
                         continue
 
                     if flagBlockBD == 'N' and countBlock >= 1:
@@ -187,44 +188,47 @@ class Window(Frame):
                         conjBlock = set(dicBlock.keys())
 
                         if conjBlockBD.issubset(conjBlock):
-                            flagBlock = 'S'
                             flagBlockBD = 'S'
-                            countObject = 0
                             print(conjBlock)
                         elif conjBlockHeader.issubset(conjBlock):
-                            flagBlock = 'H'
+                            flagBlockES = 'H'
                             countObject = 2
                             print(conjBlock)
                         elif conjBlockBody.issubset(conjBlock):
-                            flagBlock = 'B'
+                            flagBlockES = 'B'
                             countObject = 1
                             print(conjBlock)
                         elif conjBlockFoot.issubset(conjBlock):
-                            flagBlock = 'F'
+                            flagBlockES = 'F'
                             countObject = 1
                             print(conjBlock)
                         else:
-                            countObject = 0
-                            observation = "Bloque incompleto"
+                            observation = "Bloque incompleto "
+
+                        if flagBlockBD == 'N':
+                            observation += "(Bloque BD) "
+
+                        if flagBlockES == '' and flagBlockBD == 'S' and countBlock >= 1:
+                            observation += "(Bloque Estandar) "
 
                         conjBlock = conjBlock - conjConstants
 
-                        if flagBlockBD == 'N':
-                            observation = "(Bloque BD) irregular"
-
                         if len(conjBlock) == 1:
-                            
                             if observation == "":
                                 self.lista.insert(END, ' '.join(map(str, conjBlock)))
                                 self.lista.itemconfigure(END, fg="#00aa00")
-                                
+
                             else:
-                                self.lista.insert(END, ' '.join(map(str, conjBlock)) + " " + observation)
+                                self.lista.insert(END, observation)
                                 self.lista.itemconfigure(END, fg="#ff0000")
+
+                        elif len(conjBlock) == 0:
+                            self.lista.insert(END, observation)
+                            self.lista.itemconfigure(END, fg="#ff0000")
+
                         else:
-                            observation = "Bloque irregular"
-                            
-                            self.lista.insert(END, ' '.join(map(str, conjBlock)) + " " + observation)
+                            observation = "Bloque con dos o más objetos " + flagBlockES
+                            self.lista.insert(END, observation)
                             self.lista.itemconfigure(END, fg="#ff0000")
 
                         dicBlock.clear()  
@@ -236,11 +240,13 @@ class Window(Frame):
                         if flagBlockBD == 'N':
                             dicBlock = processLine(line,listBlockBD,dicBlock)
                             line = fp.readline()
+                            countLine += 1
                             continue
                         
                         indexLineComent = line.find(lineComment, beg)
                         if indexLineComent >= 0:
                             line = fp.readline()
+                            countLine += 1
                             continue
 
                         indexBlockComentOpen = line.find(blockCommentOpen, beg)
@@ -257,7 +263,7 @@ class Window(Frame):
                             
                     # siguiente linea
                     line = fp.readline()
-                    cnt += 1
+                    countLine += 1
 
         except OSError as e:
             if e.errno == errno.ENOENT:
