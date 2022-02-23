@@ -60,6 +60,8 @@ usp = 'usp_'
 exec_ = 'exec'
 grant = 'grant'
 execute = 'execute'
+reader = '_datareader'
+writer = '_datawriter'
 
 beg = 0
 
@@ -77,8 +79,10 @@ database = 'bdoperaciones'
 listBlockBD = [use, database]
 listBlockHeader = [if_, exists, from_, sysobjects, objectid_, and_, type_, drop, procedure]
 listBlockBody = [create, procedure]
-listBlockFoot = [grant, execute]
+listBlockFootReader = [grant, execute, reader]
+listBlockFootWriter = [grant, execute, writer]
 listStatements = [usp]
+listWithoutDuplicates =  list(set(listBlockHeader + listBlockBody + listBlockFootReader + listBlockFootWriter))
 listDescriptions = [datos, generales, parametros, control, version, historial, autor, fecha]
 
 class Window(Frame):
@@ -139,7 +143,7 @@ class Window(Frame):
         countLine = 0
         countObject = 0
         
-        listBlockMerge = [listBlockHeader,listBlockBody,listBlockFoot,listStatements]
+        listBlockMerge = [listWithoutDuplicates,listStatements]
 
         dicBlock = {}
         dicReport = {}
@@ -147,7 +151,7 @@ class Window(Frame):
         dicBlockDescriptions = {}
 
 #        listObjects = []
-        listConstants = [use, if_, exists, from_, sysobjects, objectid_, and_, type_, drop, procedure, create, grant, execute]
+        listConstants = [use, if_, exists, from_, sysobjects, objectid_, and_, type_, drop, procedure, create, grant, execute, reader, writer]
         conjConstants = set(listConstants)
 #        listParameters = ['@']
         
@@ -155,7 +159,8 @@ class Window(Frame):
         conjBlockBD = set(listBlockBD)
         conjBlockHeader = set(listBlockHeader)
         conjBlockBody = set(listBlockBody)
-        conjBlockFoot = set(listBlockFoot)
+        conjBlockFootReader = set(listBlockFootReader)
+        conjBlockFootWriter = set(listBlockFootWriter)
 
 #        listBlockParameters = []
         listBlockDescriptions = []
@@ -198,8 +203,12 @@ class Window(Frame):
                             flagBlockES = 'B'
                             countObject = 1
                             print(conjBlock)
-                        elif conjBlockFoot.issubset(conjBlock):
-                            flagBlockES = 'F'
+                        elif conjBlockFootReader.issubset(conjBlock):
+                            flagBlockES = 'FR'
+                            countObject = 1
+                            print(conjBlock)
+                        elif conjBlockFootWriter.issubset(conjBlock):
+                            flagBlockES = 'FW'
                             countObject = 1
                             print(conjBlock)
                         else:
@@ -285,9 +294,9 @@ def processLine(line,listMain,dicResult):
 
     return dicResult
 
-def deleteAccent(lineText):
-    s = ''.join((c for c in unicodedata.normalize('NFD',lineText) if unicodedata.category(c) != 'Mn'))
-    return s
+#def deleteAccent(lineText):
+    #s = ''.join((c for c in unicodedata.normalize('NFD',lineText) if unicodedata.category(c) != 'Mn'))
+    #return s
 
 def main():
     root = tk.Tk()
