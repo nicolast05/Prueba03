@@ -2,6 +2,7 @@
 
 # Importaciones
 ##from tkinter import *
+from ast import If
 from tkinter import Frame
 from tkinter import Menu
 from tkinter import Scrollbar
@@ -24,66 +25,95 @@ import unicodedata
 # Usuario por default
 user = getpass.getuser()
 
-select = 'select'
+""" select = 'select'
 workflow = 'n usp_'
-
 function = 'ufn_'
 equal = '='
-objectid_ = 'object_id'
 join = 'join'
 between = 'between'
 over = 'over'
 group = 'group'
-coma = ','
+coma = ',' """
 
+# constantes para omitir busqueda
 lineComment = '--'
 blockCommentOpen = '/*'
 blockCommentClose = '*/'
+exec_ = 'exec'
 
-# constantes
-
+# constante usada en funcion que procesa lineas
 space = ' '
 
+# constante que indica cierre de un bloque
 go = 'go'
+
+# constantes usadas en bloque de BD
 use = 'use'
+database = 'bdoperaciones'
+
+# constantes usadas en bloque de Header
 if_ = 'if'
 exists = 'exists'
 from_ = 'from'
 sysobjects = 'sysobjects'
+objectid_ = 'object_id'
 and_ = 'and'
 type_ = 'type'
 drop = 'drop'
 procedure = 'procedure'
 
+# constantes usadas en bloque de Body
 create = 'create'
-usp = 'usp_'
-exec_ = 'exec'
+as_ = 'as'
+
+# constantes usadas en bloque de Foot
 grant = 'grant'
 execute = 'execute'
 reader = '_datareader'
 writer = '_datawriter'
+sqlbi = '_sqlbi'
 
-beg = 0
+# constantes principales de busqueda
+usp = 'usp_'
 
-datos = 'datos'
+
+""" datos = 'datos'
 generales = 'generales'
 parametros= 'parametros'
 control = 'control'
 version = 'version'
 historial = 'historial'
 autor = 'autor'
-fecha = 'fecha'
+fecha = 'fecha' """
 
-database = 'bdoperaciones'
-
+# listas para bloques
 listBlockBD = [use, database]
 listBlockHeader = [if_, exists, from_, sysobjects, objectid_, and_, type_, drop, procedure]
-listBlockBody = [create, procedure]
+listBlockBody = [create, procedure, as_]
 listBlockFootReader = [grant, execute, reader]
 listBlockFootWriter = [grant, execute, writer]
-listStatements = [usp]
-listWithoutDuplicates =  list(set(listBlockHeader + listBlockBody + listBlockFootReader + listBlockFootWriter))
-listDescriptions = [datos, generales, parametros, control, version, historial, autor, fecha]
+listBlockFootSQLBI = [grant, execute, sqlbi]
+
+# lista de constantes principales
+listMainConstants = [usp]
+
+# listas para procesar información
+""" listWithoutDuplicates =  list(set(listBlockHeader + listBlockBody + listBlockFootReader + listBlockFootWriter + listBlockFootSQLBI))
+listConstants = [use, if_, exists, from_, sysobjects, objectid_, and_, type_, drop, procedure, create, as_, grant, execute, reader, writer, sqlbi] """
+listConstants =  list(set(listBlockHeader + listBlockBody + listBlockFootReader + listBlockFootWriter + listBlockFootSQLBI))
+
+""" listDescriptions = [datos, generales, parametros, control, version, historial, autor, fecha] """
+
+# conjuntos para bloques
+conjBlockBD = set(listBlockBD)
+conjBlockHeader = set(listBlockHeader)
+conjBlockBody = set(listBlockBody)
+conjBlockFootReader = set(listBlockFootReader)
+conjBlockFootWriter = set(listBlockFootWriter)
+conjBlockFootSQLBI = set(listBlockFootSQLBI)
+
+# conjunto para procesar información
+conjConstants = set(listConstants)
 
 class Window(Frame):
 
@@ -125,9 +155,10 @@ class Window(Frame):
 
         self.master.destroy()
 
-    # Funcion para abrir un doc
+    # Funcion para abrir un doc sql y procesar su contenido
     def openFile(self):
 
+        # limpiamos contenido de la lista como interfaz
         self.lista.delete(0, END)
 
         # obtenemos el archivo
@@ -136,33 +167,27 @@ class Window(Frame):
                                                ("SQL File", "*.sql"), ("All Files", "*.*")),
                                            title="Selección de Archivo")
 
+        # Switch que indica si estamos en contenido de comentario en bloque -- N : no ; S : si 
         switchCommentOn = 'N'
-        flagBlockBD = 'N'
+        # Flag para inicializar bloque de BD 
+        flagBlockBD = ''
+        # Flag para inicializar bloque estandar
         flagBlockES = ''
+        # Contador de bloques
         countBlock = 0
+        # Contador de lineas de contenido
         countLine = 0
         countObject = 0
         
-        listBlockMerge = [listWithoutDuplicates,listStatements]
+        listOfLists = [listConstants,listMainConstants]
 
         dicBlock = {}
         dicReport = {}
-#        dicParameters = {}
         dicBlockDescriptions = {}
 
-#        listObjects = []
-        listConstants = [use, if_, exists, from_, sysobjects, objectid_, and_, type_, drop, procedure, create, grant, execute, reader, writer]
-        conjConstants = set(listConstants)
-#        listParameters = ['@']
-        
-#        listBlock = []
-        conjBlockBD = set(listBlockBD)
-        conjBlockHeader = set(listBlockHeader)
-        conjBlockBody = set(listBlockBody)
-        conjBlockFootReader = set(listBlockFootReader)
-        conjBlockFootWriter = set(listBlockFootWriter)
 
-#        listBlockParameters = []
+        
+
         listBlockDescriptions = []
 
         try:
@@ -184,7 +209,7 @@ class Window(Frame):
                         countLine += 1
                         continue
 
-                    if flagBlockBD == 'N' and countBlock >= 1:
+                    if flagBlockBD == '' and countBlock >= 1:
                         break
 
                     if strippedLine == go:
@@ -193,7 +218,7 @@ class Window(Frame):
                         conjBlock = set(dicBlock.keys())
 
                         if conjBlockBD.issubset(conjBlock):
-                            flagBlockBD = 'S'
+                            flagBlockBD = 'BD'
                             print(conjBlock)
                         elif conjBlockHeader.issubset(conjBlock):
                             flagBlockES = 'H'
@@ -211,64 +236,79 @@ class Window(Frame):
                             flagBlockES = 'FW'
                             countObject = 1
                             print(conjBlock)
+                        elif conjBlockFootSQLBI.issubset(conjBlock):
+                            flagBlockES = 'FS'
+                            countObject = 1
+                            print(conjBlock)
                         else:
                             observation = "Bloque incompleto "
+                            flagBlockES = ''
 
-                        if flagBlockBD == 'N':
-                            observation += "(Bloque BD) "
-
-                        if flagBlockES == '' and flagBlockBD == 'S' and countBlock >= 1:
-                            observation += "(Bloque Estandar) "
-
-                        conjBlock = conjBlock - conjConstants
-
-                        if len(conjBlock) == 1:
-                            if observation == "":
+                        if countBlock == 0:
+                            if flagBlockBD == '':
+                                observation += "(Bloque BD) "
+                            else:
                                 self.lista.insert(END, ' '.join(map(str, conjBlock)))
                                 self.lista.itemconfigure(END, fg="#00aa00")
+                            
+                        else:    
+                            if flagBlockES == '':
+                                observation += "(Bloque Estandar) "
+                            else:
+                                conjBlock = conjBlock - conjConstants   
+
+                            if len(conjBlock) == 1:
+                                if observation == "":
+                                    self.lista.insert(END, ' '.join(map(str, conjBlock)))
+                                    self.lista.itemconfigure(END, fg="#00aa00")
+
+                                else:
+                                    self.lista.insert(END, observation)
+                                    self.lista.itemconfigure(END, fg="#ff0000")
+
+                            elif len(conjBlock) == 0:
+                                self.lista.insert(END, observation)
+                                self.lista.itemconfigure(END, fg="#ff0000")
 
                             else:
                                 self.lista.insert(END, observation)
                                 self.lista.itemconfigure(END, fg="#ff0000")
 
-                        elif len(conjBlock) == 0:
-                            self.lista.insert(END, observation)
-                            self.lista.itemconfigure(END, fg="#ff0000")
-
-                        else:
-                            observation = "Bloque con dos o más objetos " + flagBlockES
-                            self.lista.insert(END, observation)
-                            self.lista.itemconfigure(END, fg="#ff0000")
-
                         dicBlock.clear()  
                         #dicBlockDescriptions.clear()
                         #print(dicReport)
                         countBlock += 1
-                    else:
-                        
-                        if flagBlockBD == 'N':
+
+                    elif flagBlockBD == '':
                             dicBlock = processLine(line,listBlockBD,dicBlock)
                             line = fp.readline()
                             countLine += 1
                             continue
+
+                    else:
                         
-                        indexLineComent = line.find(lineComment, beg)
+                        indexLineComent = line.find(lineComment, 0)
+                        indexBlockComentOpen = line.find(blockCommentOpen, 0)
+                        indexExec = strippedLine.find(exec_, 0)
+
                         if indexLineComent >= 0:
                             line = fp.readline()
                             countLine += 1
                             continue
-
-                        indexBlockComentOpen = line.find(blockCommentOpen, beg)
-                        if indexBlockComentOpen >= 0 or switchCommentOn == 'S':
-                            indexBlockComentClose = line.find(blockCommentClose, beg)
+                        elif indexBlockComentOpen >= 0 or switchCommentOn == 'S':
+                            indexBlockComentClose = line.find(blockCommentClose, 0)
                             if indexBlockComentClose >= 0:
                                 switchCommentOn = 'N'
                             else:
                                 #dicBlockDescriptions = processLine(line,listDescriptions,dicBlockDescriptions)
                                 switchCommentOn = 'S'
+                        elif indexExec == 0:
+                            line = fp.readline()
+                            countLine += 1
+                            continue
                         else:
-                            for target in listBlockMerge:
-                                dicBlock = processLine(line,target,dicBlock)
+                            for listTarget in listOfLists:
+                                dicBlock = processLine(line,listTarget,dicBlock)
                             
                     # siguiente linea
                     line = fp.readline()
@@ -279,13 +319,13 @@ class Window(Frame):
                 messagebox.showwarning("Warning", "File not found / File not selected")
 
 def processLine(line,listMain,dicResult):
-    #listMainAux = listMain + listStatements
+    #hacemos un bucle de busqueda por cada elemento de la lista que ingresa
     for const in listMain:
-        startPosition = line.find(const, beg)
+        startPosition = line.find(const, 0)
         while startPosition >= 0:
             endPosition = line.find(space, startPosition)
             object_ = line[startPosition: endPosition]                                    
-            if object_ in listMain or const in listStatements:
+            if object_ in listMain or const in listMainConstants:
                 if object_ in dicResult.keys():
                     dicResult[object_] += 1
                 else:
