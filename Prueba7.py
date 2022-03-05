@@ -76,15 +76,21 @@ sqlbi = '_sqlbi'
 # constantes principales de busqueda
 usp = 'usp_'
 
-
-""" datos = 'datos'
+# constantes en subbloque contenido en descripcion
+datos = 'datos'
 generales = 'generales'
 parametros= 'parametros'
 control = 'control'
 version = 'version'
 historial = 'historial'
 autor = 'autor'
-fecha = 'fecha' """
+fecha = 'fecha'
+descripcion = 'descripcion'
+
+# constantes principales de busqueda en sub bloques
+arroba = '@'
+dospuntos = ':'
+punto = '.'
 
 # listas para bloques
 listBlockBD = [use, database]
@@ -98,15 +104,11 @@ listBlockFootSQLBI = [grant, execute, sqlbi]
 listMainConstants = [usp]
 
 # listas para procesar información
-""" listWithoutDuplicates =  list(set(listBlockHeader + listBlockBody + listBlockFootReader + listBlockFootWriter + listBlockFootSQLBI))
-listConstants = [use, if_, exists, from_, sysobjects, objectid_, and_, type_, drop, procedure, create, as_, grant, execute, reader, writer, sqlbi] """
 listConstants =  list(set(listBlockHeader + listBlockBody + listBlockFootReader + listBlockFootWriter + listBlockFootSQLBI))
-
-""" listDescriptions = [datos, generales, parametros, control, version, historial, autor, fecha] """
 
 # conjuntos para bloques
 conjBlockBD = set(listBlockBD)
-conjBlockHeader = set(listBlockHeader)
+conjBlockHead = set(listBlockHeader)
 conjBlockBody = set(listBlockBody)
 conjBlockFootReader = set(listBlockFootReader)
 conjBlockFootWriter = set(listBlockFootWriter)
@@ -114,6 +116,26 @@ conjBlockFootSQLBI = set(listBlockFootSQLBI)
 
 # conjunto para procesar información
 conjConstants = set(listConstants)
+
+# listas para sub bloques
+listSubBlockDatosGenerales = [datos, generales, descripcion]
+listSubBlockParametros = [parametros]
+listSubBlocControlVersion = [control, version, historial, autor, fecha, descripcion]
+
+# lista de constantes principales en sub bloques
+#listMainConstantsDescription = [arroba, dospuntos, punto]
+listMainConstantsDescription = [dospuntos]
+
+# lista para procesar informacion de sub blqoues
+listConstantsDescription = list(set(listSubBlockDatosGenerales + listSubBlockParametros + listSubBlocControlVersion))
+
+# conjuntos para sub bloques
+conjSubBlockDatosGenerales = set(listSubBlockDatosGenerales)
+conjSubBlockParametros = set(listSubBlockParametros)
+conjSubBlockControlVersion = set(listSubBlocControlVersion)
+
+# conjunto para procesar información en sub bloques
+conjConstantsDescription = set(listConstantsDescription)
 
 class Window(Frame):
 
@@ -174,21 +196,20 @@ class Window(Frame):
         # Flag para inicializar bloque estandar
         flagBlockES = ''
         # Contador de bloques
-        countBlock = 0
+        countBlock = 1
         # Contador de lineas de contenido
         countLine = 0
         countObject = 0
         
+        # Lista de Listas para procesar
         listOfLists = [listConstants,listMainConstants]
 
+        # Diccionario temporal para procesar contenido
         dicBlock = {}
+
         dicReport = {}
-        dicBlockDescriptions = {}
-
-
-        
-
-        listBlockDescriptions = []
+        dicTempLineDescriptions = {}
+        ListTempLineDescriptions = []
 
         try:
             # con el nombre del archivo
@@ -202,81 +223,90 @@ class Window(Frame):
                     line = line.lower().replace(')', ' ').replace('(', ' ').replace('[', ' ').replace(
                         ']', ' ').replace('.', ' ').replace("'", ' ').replace("\n", ' ').replace("\t", ' ')
 
+                    # eliminamos espacios en blanco
                     strippedLine = line.strip()
 
+                    # si la linea de contenido es vacía, leemos la siguiente linea
                     if strippedLine == "":
                         line = fp.readline()
                         countLine += 1
                         continue
-
-                    if flagBlockBD == '' and countBlock >= 1:
+                    
+                    # si no tenemos bloque de BD y ya pasamos el primer bloque
+                    if flagBlockBD == '' and countBlock >= 2:
                         break
 
+                    # si la linea de contenido sin espacios es igual a la constante go
                     if strippedLine == go:
-
+                        
+                        # inicializamos la variable para observaciones
                         observation = ''
+
+                        # obtenemos el contenido del diccionario temporal y lo seteamos como conjunto
                         conjBlock = set(dicBlock.keys())
 
+                        # validamos si el contenido de algun bloque esta dentro de nuestro contenido
                         if conjBlockBD.issubset(conjBlock):
                             flagBlockBD = 'BD'
                             print(conjBlock)
-                        elif conjBlockHeader.issubset(conjBlock):
-                            flagBlockES = 'H'
+                        elif conjBlockHead.issubset(conjBlock):
+                            flagBlockES = 'Head'
                             countObject = 2
                             print(conjBlock)
                         elif conjBlockBody.issubset(conjBlock):
-                            flagBlockES = 'B'
+                            flagBlockES = 'Body'
                             countObject = 1
                             print(conjBlock)
                         elif conjBlockFootReader.issubset(conjBlock):
-                            flagBlockES = 'FR'
+                            flagBlockES = 'FootReader'
                             countObject = 1
                             print(conjBlock)
                         elif conjBlockFootWriter.issubset(conjBlock):
-                            flagBlockES = 'FW'
+                            flagBlockES = 'FootWriter'
                             countObject = 1
                             print(conjBlock)
                         elif conjBlockFootSQLBI.issubset(conjBlock):
-                            flagBlockES = 'FS'
+                            flagBlockES = 'FootSQLBI'
                             countObject = 1
                             print(conjBlock)
                         else:
-                            observation = "Bloque incompleto "
+                            observation = "Bloque incompleto " 
                             flagBlockES = ''
 
-                        if countBlock == 0:
+                        # si el contador de bloque es 1 validaremos el bloque de BD
+                        if countBlock == 1:
                             if flagBlockBD == '':
-                                observation += "(Bloque BD) "
+                                observation += "(Bloque BD) " 
                             else:
                                 self.lista.insert(END, ' '.join(map(str, conjBlock)))
                                 self.lista.itemconfigure(END, fg="#00aa00")
-                            
+
+                        # si el contador de bloque mayor a 1 validaremos el bloque estandar     
                         else:    
                             if flagBlockES == '':
-                                observation += "(Bloque Estandar) "
+                                observation += "(Bloque Estandar) " 
                             else:
                                 conjBlock = conjBlock - conjConstants   
 
                             if len(conjBlock) == 1:
                                 if observation == "":
-                                    self.lista.insert(END, ' '.join(map(str, conjBlock)))
+                                    self.lista.insert(END,' '.join(map(str, conjBlock)))
                                     self.lista.itemconfigure(END, fg="#00aa00")
 
                                 else:
-                                    self.lista.insert(END, observation)
+                                    self.lista.insert(END, observation + 'linea: ' + str(countLine))
                                     self.lista.itemconfigure(END, fg="#ff0000")
 
                             elif len(conjBlock) == 0:
-                                self.lista.insert(END, observation)
+                                self.lista.insert(END, observation + 'linea: ' + str(countLine))
                                 self.lista.itemconfigure(END, fg="#ff0000")
 
                             else:
-                                self.lista.insert(END, observation)
+                                self.lista.insert(END, observation + 'linea: ' + str(countLine))
                                 self.lista.itemconfigure(END, fg="#ff0000")
 
+                        # limpiamos el diccionario temporal y sumamos 1 al contador de bloques
                         dicBlock.clear()  
-                        #dicBlockDescriptions.clear()
-                        #print(dicReport)
                         countBlock += 1
 
                     elif flagBlockBD == '':
@@ -291,16 +321,25 @@ class Window(Frame):
                         indexBlockComentOpen = line.find(blockCommentOpen, 0)
                         indexExec = strippedLine.find(exec_, 0)
 
-                        if indexLineComent >= 0:
+                        if indexLineComent >= 0 and switchCommentOn == 'N':
                             line = fp.readline()
                             countLine += 1
                             continue
                         elif indexBlockComentOpen >= 0 or switchCommentOn == 'S':
                             indexBlockComentClose = line.find(blockCommentClose, 0)
                             if indexBlockComentClose >= 0:
+                                conjSubBlock = set(dicTempLineDescriptions.keys())
+                                
                                 switchCommentOn = 'N'
                             else:
-                                #dicBlockDescriptions = processLine(line,listDescriptions,dicBlockDescriptions)
+                                dicTempLineDescriptions = processLine(line,listConstantsDescription,dicTempLineDescriptions)
+                                
+                                if conjConstantsDescription.issubset(set(dicTempLineDescriptions.keys())):
+                                    #buscamos versiones
+                                    ListTempLineDescriptions = processLineBloqueComentariosVersion(line,space,ListTempLineDescriptions)
+                                else:
+                                    ListTempLineDescriptions = processLineBloqueComentarios(line,listMainConstantsDescription,ListTempLineDescriptions)
+
                                 switchCommentOn = 'S'
                         elif indexExec == 0:
                             line = fp.readline()
@@ -334,6 +373,54 @@ def processLine(line,listMain,dicResult):
 
     return dicResult
 
+def processLineBloqueComentarios(line,listMain,listResult):
+    #hacemos un bucle de busqueda por cada elemento de la lista que ingresa
+    for const in listMain:
+        startPosition = line.find(const, 0)
+        if startPosition >= 0:
+            endPosition = len(line)-1
+            objectsufijo_ = line[startPosition + 1 : endPosition].strip()
+            objectprefijo_ = line[0 : startPosition - 1].strip()
+            object_ = objectprefijo_ + const + objectsufijo_
+            listResult.append(object_)
+        """ while startPosition >= 0:
+            endPosition = line.find(space, startPosition)
+            object_ = line[startPosition: endPosition]                                    
+            if object_ in listMain or const in listMainConstants:
+                if object_ in dicResult.keys():
+                    dicResult[object_] += 1
+                else:
+                    dicResult[object_] = 1                           
+            startPosition = line.find(const, endPosition + 1) """
+
+    return listResult
+
+def processLineBloqueComentariosVersion(line,const,listResult):
+    #hacemos un bucle de busqueda por cada elemento de la lista que ingresa
+    
+    startPosition = line.find(const, 0)
+    if startPosition >= 0:
+        endPosition = len(line)-1
+        objectsufijo_ = line[startPosition + 1 : endPosition].strip()
+        if startPosition == 1:
+            objectprefijo_ = line[0 : startPosition]
+        else:
+            objectprefijo_ = line[0 : startPosition - 1].strip()
+        object_ = objectprefijo_ + punto + objectsufijo_
+        object_ = " ".join(object_.split())
+        startPosition = object_.find(const, 0)
+        listResult.append(object_)
+        """ while startPosition >= 0:
+            endPosition = line.find(space, startPosition)
+            object_ = line[startPosition: endPosition]                                    
+            if object_ in listMain or const in listMainConstants:
+                if object_ in dicResult.keys():
+                    dicResult[object_] += 1
+                else:
+                    dicResult[object_] = 1                           
+            startPosition = line.find(const, endPosition + 1) """
+
+    return listResult
 #def deleteAccent(lineText):
     #s = ''.join((c for c in unicodedata.normalize('NFD',lineText) if unicodedata.category(c) != 'Mn'))
     #return s
