@@ -340,7 +340,7 @@ class Window(Frame):
                                     conjTempParameters = set (listTempParameters)
 
                                     if conjTempDescriptionParameters.issubset(conjTempParameters):
-                                        self.lista.insert(END,' '.join(map(str, conjTempBlock)) + ' : '+ flagBlockES + ' Confirmación variables en parámetros')
+                                        self.lista.insert(END,'Confirmación variables en parámetros')
                                         self.lista.itemconfigure(END, fg="#00aa00")
                                     else:
                                         self.lista.insert(END,'Inconsistencia en parámetros')
@@ -355,14 +355,14 @@ class Window(Frame):
                                         str_match = [s for s in listTempVersions if lastVersion in s]
                                         if len(str_match) > 0:
                                             # insertamos variable de bloque ES
-                                            self.lista.insert(END,' '.join(map(str, conjTempBlock)) + ' : '+ flagBlockES + ' Confirmación en versión')
+                                            self.lista.insert(END,'confirmación en versión')
                                             self.lista.itemconfigure(END, fg="#00aa00")
                                         else:
-                                            self.lista.insert(END, 'No se encuentra versión')
+                                            self.lista.insert(END, 'no se encuentra versión')
                                             self.lista.itemconfigure(END, fg="#ff0000")    
                                     else:
                                         # insertamos variable de bloque ES
-                                        self.lista.insert(END,'Confirmación versión inicial')
+                                        self.lista.insert(END,'confirmación versión inicial')
                                         self.lista.itemconfigure(END, fg="#00aa00")
 
                         # limpiamos el diccionario temporal por bloque y sumamos 1 al contador de bloques
@@ -384,6 +384,30 @@ class Window(Frame):
                             line = fp.readline()
                             countLine += 1
                             continue
+                        
+                        if conjBlockBody.issubset(conjBlock):
+                            #busco parametros
+                            listTempParameters = processLineFromConstToListSuffix(line,arroba,listTempParameters)
+                            #busco version
+                            dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
+
+                        else:
+                            for listTarget in listOfLists:
+                                dicTempBlock = processLineFromListToDic(line,listTarget,dicTempBlock)
+
+                            conjBlock = set(dicTempBlock.keys())
+
+                            if conjBlockBody.issubset(conjBlock):
+                                #busco parametros
+                                listTempParameters = processLineFromConstToListSuffix(line,arroba,listTempParameters)
+                                #busco version
+                                dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
+                                #busco separador As
+                            #Descripcion
+                            else:
+                                #sss
+                                conjBlock = set(dicTempBlock.keys())
+
 
                         indexLineComent = line.find(lineComment, 0)
                         indexBlockComentOpen = line.find(blockCommentOpen, 0)
@@ -409,10 +433,7 @@ class Window(Frame):
                             continue """
                         if indexLineComent >= 0:
 
-                            if indexLineComent != 0:
-                                #busco parametros
-                                listTempParameters = processLineFromConstToListSuffix(line,arroba,listTempParameters)
-                                
+                            
                             #busco version
                             dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
                             line = fp.readline()
@@ -434,9 +455,8 @@ class Window(Frame):
                                     lastVersion = listTempDescriptionVersionsFull[0]
                                 else:
                                     lastVersion = listTempDescriptionVersionsFull[len(listTempDescriptionVersionsFull) - 1]
-                                #comentamos ultimaversion full
-                                """ self.lista.insert(END, lastVersion)
-                                self.lista.itemconfigure(END, fg="#00aa00") """
+                                self.lista.insert(END, lastVersion)
+                                self.lista.itemconfigure(END, fg="#00aa00")
 
                                 dicTempDescriptions.clear() 
                                 listTempDescriptionParametersFull.clear()#parametros :
@@ -565,16 +585,6 @@ def processLineFromConstToListSuffix(line,const,listResult):
     #hacemos una busqueda de la constante que ingresa
     line = line.replace(':',' ')
     startPosition = line.find(const, 0)
-    """ if startPosition >= 0:
-        endPosition = line.find(space, startPosition)
-        objectsufijo_ = line[startPosition + 1 : endPosition].strip()
-        if startPosition == 1:
-            objectprefijo_ = line[0 : startPosition]
-        else:
-            objectprefijo_ = line[0 : startPosition - 1].strip()
-        object_ = const + objectsufijo_
-        object_ = " ".join(object_.split())
-        listResult.append(object_) """
 
     while startPosition >= 0:
         endPosition = line.find(space, startPosition)
