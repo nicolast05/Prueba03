@@ -23,7 +23,6 @@ import tkinter.filedialog as fdialog
 import getpass
 import os
 import errno
-from typing import Set
 import unicodedata
 
 # Usuario por default
@@ -77,6 +76,11 @@ reader = '_datareader'
 writer = '_datawriter'
 sqlbi = '_sqlbi'
 
+# constantes usadas en bloque de extendedproperty
+addextendedproperty = 'sp_addextendedproperty'
+workflow = 'workflow'
+schema = 'schema'
+
 # constantes principales de busqueda
 usp = 'usp_'
 
@@ -103,12 +107,13 @@ listBlockBody = [create, procedure]
 listBlockFootReader = [grant, execute, reader]
 listBlockFootWriter = [grant, execute, writer]
 listBlockFootSQLBI = [grant, execute, sqlbi]
+listBlockExtendedProperty = [addextendedproperty, workflow, schema]
 
 # lista de constantes para identificar variables
 listMainConstants = [usp]
 
 # listas para procesar información
-listConstants =  list(set(listBlockHeader + listBlockBody + listBlockFootReader + listBlockFootWriter + listBlockFootSQLBI))
+listConstants =  list(set(listBlockHeader + listBlockBody + listBlockFootReader + listBlockFootWriter + listBlockFootSQLBI + listBlockExtendedProperty))
 
 # conjuntos para bloques
 conjBlockBD = set(listBlockBD)
@@ -117,6 +122,7 @@ conjBlockBody = set(listBlockBody)
 conjBlockFootReader = set(listBlockFootReader)
 conjBlockFootWriter = set(listBlockFootWriter)
 conjBlockFootSQLBI = set(listBlockFootSQLBI)
+conjBlockExtendedProperty = set(listBlockExtendedProperty)
 
 # conjunto para procesar información
 conjConstants = set(listConstants)
@@ -170,7 +176,7 @@ class Window(Frame):
         self.scrollbar = Scrollbar(self.master, orient=VERTICAL)
         self.scrollbar.pack(side=RIGHT, fill=Y)
         # Lista
-        self.lista = Listbox(self.master, font=("Helvetica", 8), borderwidth=0, activestyle=NONE, yscrollcommand=self.scrollbar.set)
+        self.lista = Listbox(self.master, font=("Verdana", 12), borderwidth=0, activestyle=NONE, yscrollcommand=self.scrollbar.set)
         self.lista.pack(fill=BOTH, expand=1)
         self.scrollbar.config(command=self.lista.yview)
         
@@ -224,16 +230,27 @@ class Window(Frame):
         listTempParameters = []
         listTempDescriptionParameters = []
 
+        listTempVersions = []
+        listTempDescriptionVersions = []
+
         lastVersion = ''
 
         try:
             # con el nombre del archivo
-            with open(filepath, encoding='latin-1', mode='r', errors='ignore') as fp:
+            with open(filepath, encoding='utf-8', mode='r', errors='ignore') as fp:
                 # obtenemos la primera linea
                 line = fp.readline()
+
                 
                 # mientras exista una linea
                 while line:
+
+                    if countLine == 4330:
+                        line = line
+
+                    line = line.encode('latin 1')
+                    line = line.decode('latin 1')
+
                     # damos formato estandar a la linea reemplazando )([].'\n\t' por un espacio
                     line = line.lower().replace(')', ' ').replace('(', ' ').replace('[', ' ').replace(
                         ']', ' ').replace('.', ' ').replace("'", ' ').replace("\n", ' ').replace("\t", ' ')
@@ -281,6 +298,10 @@ class Window(Frame):
                             """ print(conjTempBlock) """
                         elif conjBlockFootSQLBI.issubset(conjTempBlock):
                             flagBlockES = 'FootSQLBI'
+                            countObject = 1
+                            """ print(conjTempBlock) """
+                        elif conjBlockExtendedProperty.issubset(conjTempBlock):
+                            flagBlockES = 'ExtendedProperty'
                             countObject = 1
                             """ print(conjTempBlock) """
                         else:
@@ -343,13 +364,19 @@ class Window(Frame):
                                         self.lista.insert(END,' '.join(map(str, conjTempBlock)) + ' : '+ flagBlockES + ' Confirmación variables en parámetros')
                                         self.lista.itemconfigure(END, fg="#00aa00")
                                     else:
+                                        conjdeb = conjTempDescriptionParameters - conjTempParameters
                                         self.lista.insert(END,'Inconsistencia en parámetros')
                                         self.lista.itemconfigure(END, fg="#ff0000")
 
                                     listTempDescriptionVersions = list(dicTempDescriptionVersions.keys())
                                     listTempVersions = list(dicTempVersions.keys())
                                     
-                                    lastVersion = listTempDescriptionVersions[len(listTempDescriptionVersions) - 1]
+                                    if len(listTempDescriptionVersions) == 0:
+                                        lastVersion = "vacio"
+                                    elif len(listTempDescriptionVersions) == 1:
+                                        lastVersion = listTempDescriptionVersions[0]
+                                    else:
+                                        lastVersion = listTempDescriptionVersions[len(listTempDescriptionVersions) - 1]
                                         
                                     if lastVersion != '1 0':
                                         str_match = [s for s in listTempVersions if lastVersion in s]
@@ -362,14 +389,20 @@ class Window(Frame):
                                             self.lista.itemconfigure(END, fg="#ff0000")    
                                     else:
                                         # insertamos variable de bloque ES
-                                        self.lista.insert(END,'Confirmación versión inicial')
+                                        self.lista.insert(END,' '.join(map(str, conjTempBlock)) + ' : '+ flagBlockES + ' Confirmación versión inicial')
                                         self.lista.itemconfigure(END, fg="#00aa00")
 
                         # limpiamos el diccionario temporal por bloque y sumamos 1 al contador de bloques
                         dicTempBlock.clear()
+                        dicTempVersions.clear()
 
                         listTempParameters.clear()
                         listTempDescriptionParameters.clear()
+
+                        listTempVersions.clear()
+                        listTempDescriptionVersions.clear()
+
+                        dicTempDescriptionVersions.clear()
 
                         countBlock += 1
 
@@ -386,16 +419,24 @@ class Window(Frame):
                             continue
 
                         indexLineComent = line.find(lineComment, 0)
-                        indexBlockComentOpen = line.find(blockCommentOpen, 0)
+                        
                         indexExec = strippedLine.find(exec_, 0)
-                        indexBlockAsOpen = strippedLine.find(as_, 0)
+                        if switchAsOn == 'N':
+                            indexBlockAsOpen = strippedLine.find(as_, 0)
+                            indexBlockComentOpen = line.find(blockCommentOpen, 0)
 
                         if indexBlockAsOpen > 0:
-                            indexPrefixAs = strippedLine.find(' ', indexBlockAsOpen - 1)
-                            indexSufixAs = strippedLine.find(' ', indexBlockAsOpen + 1)
 
-                            if len(strippedLine) == indexPrefixAs + 3:
-                                indexSufixAs = 0
+                            while indexBlockAsOpen > 0:
+                                indexPrefixAs = strippedLine.find(' ', indexBlockAsOpen - 1, indexBlockAsOpen)
+                                indexSufixAs = strippedLine.find(' ', indexBlockAsOpen + 1, indexBlockAsOpen)
+                                if indexPrefixAs >= 0:
+                                    if len(strippedLine) == indexPrefixAs + 3:
+                                        indexSufixAs = 0
+                                indexBlockAsOpen = strippedLine.find(as_, indexBlockAsOpen + 2)
+
+                            if indexPrefixAs >= 0 and indexSufixAs >= 0:
+                                indexBlockAsOpen = 0
 
                         elif indexBlockAsOpen == 0:
                             indexPrefixAs = 0
@@ -407,7 +448,7 @@ class Window(Frame):
                             line = fp.readline()
                             countLine += 1
                             continue """
-                        if indexLineComent >= 0:
+                        if indexLineComent >= 0 and switchAsOn == 'S':
 
                             if indexLineComent != 0:
                                 #busco parametros
@@ -418,13 +459,15 @@ class Window(Frame):
                             line = fp.readline()
                             countLine += 1
                             continue
-                        elif indexExec == 0:
+                        elif indexExec == 0 and switchAsOn == 'S':
+                            
                             #busco version
                             dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
                             line = fp.readline()
                             countLine += 1
                             continue
-                        elif indexBlockComentOpen >= 0 or switchCommentOn == 'S':
+                         
+                        elif (indexBlockComentOpen >= 0 or switchCommentOn == 'S') and switchAsOn == 'N':
                             indexBlockComentClose = line.find(blockCommentClose, 0)
                             conjSubBlock = set(dicTempDescriptions.keys())
                             if indexBlockComentClose >= 0:
@@ -468,22 +511,33 @@ class Window(Frame):
                             #busco version
                             dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
                             
-                            if indexBlockAsOpen > 0 and indexPrefixAs >= 0 and indexSufixAs >= 0:
+                            if indexBlockAsOpen >= 0 and indexPrefixAs >= 0 and indexSufixAs >= 0:
                                 switchAsOn = 'S'
 
                             
 
                         else:
-                                
-                            for listTarget in listOfLists:
-                                dicTempBlock = processLineFromListToDic(line,listTarget,dicTempBlock)
+                            
+                            conjBlock = set(dicTempBlock.keys())
+                            if conjBlockBody.issubset(conjBlock):
+                                #busco version
+                                dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
+                            else:
+
+                                for listTarget in listOfLists:
+                                    dicTempBlock = processLineFromListToDic(line,listTarget,dicTempBlock)
 
                             conjBlock = set(dicTempBlock.keys())
                             if switchAsOn == 'N' and conjBlockBody.issubset(conjBlock):
                                 #busco parametros
                                 listTempParameters = processLineFromConstToListSuffix(line,arroba,listTempParameters)
+                                #busco version
+                                dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
 
-                            switchAsOn = 'N'
+                            if switchAsOn == 'S':
+                                switchAsOn == 'S'
+                            else:
+                                switchAsOn = 'N'
                             
                     # siguiente linea
                     line = fp.readline()
@@ -609,11 +663,25 @@ def processLineFromConstToListPrefix(line,const,listResult):
 def stripAccents(s):
    return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
 
+""" def detect(s):
+     
+    try:
+        # check it in the charade list
+        if isinstance(s, str):
+            return charade.detect(s.encode())
+        # detecting the string
+        else:
+            return charade.detect(s)
+     
+    # in case of error
+    # encode with 'utf -8' encoding
+    except UnicodeDecodeError:
+        return charade.detect(s.encode('utf-8')) """
 
 def main():
     root = tk.Tk()
     root.iconbitmap('kms.ico')
-    root.geometry("400x300+300+300")
+    root.geometry("600x300+300+300")
     app = Window(root)
     root.mainloop()
 

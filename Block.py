@@ -2,6 +2,11 @@
 # -*- coding: utf-8 -*-
 import unicodedata
 
+
+
+
+
+
 u = 'abcdé'
 print(ord(u[-1]))
 
@@ -83,3 +88,5 @@ print (listR) """
 
 var = strip_accents(stri)
 print(var) """
+
+

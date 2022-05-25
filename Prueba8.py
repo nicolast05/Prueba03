@@ -77,6 +77,11 @@ reader = '_datareader'
 writer = '_datawriter'
 sqlbi = '_sqlbi'
 
+# constantes usadas en bloque de extendedproperty
+addextendedproperty = 'sp_addextendedproperty'
+workflow = 'workflow'
+schema = 'schema'
+
 # constantes principales de busqueda
 usp = 'usp_'
 
@@ -103,12 +108,13 @@ listBlockBody = [create, procedure]
 listBlockFootReader = [grant, execute, reader]
 listBlockFootWriter = [grant, execute, writer]
 listBlockFootSQLBI = [grant, execute, sqlbi]
+listBlockExtendedProperty = [addextendedproperty, workflow, schema]
 
 # lista de constantes para identificar variables
 listMainConstants = [usp]
 
 # listas para procesar información
-listConstants =  list(set(listBlockHeader + listBlockBody + listBlockFootReader + listBlockFootWriter + listBlockFootSQLBI))
+listConstants =  list(set(listBlockHeader + listBlockBody + listBlockFootReader + listBlockFootWriter + listBlockFootSQLBI + listBlockExtendedProperty))
 
 # conjuntos para bloques
 conjBlockBD = set(listBlockBD)
@@ -117,6 +123,7 @@ conjBlockBody = set(listBlockBody)
 conjBlockFootReader = set(listBlockFootReader)
 conjBlockFootWriter = set(listBlockFootWriter)
 conjBlockFootSQLBI = set(listBlockFootSQLBI)
+conjBlockExtendedProperty = set(listBlockExtendedProperty)
 
 # conjunto para procesar información
 conjConstants = set(listConstants)
@@ -224,6 +231,9 @@ class Window(Frame):
         listTempParameters = []
         listTempDescriptionParameters = []
 
+        listTempVersions = []
+        listTempDescriptionVersions = []
+
         lastVersion = ''
 
         try:
@@ -283,6 +293,10 @@ class Window(Frame):
                             flagBlockES = 'FootSQLBI'
                             countObject = 1
                             """ print(conjTempBlock) """
+                        elif conjBlockExtendedProperty.issubset(conjTempBlock):
+                            flagBlockES = 'ExtendedProperty'
+                            countObject = 1
+                            """ print(conjTempBlock) """
                         else:
                             # al no tener ningun conjunto bloque en nuestro contenido, indicamos observacion
                             flagBlockES = ''
@@ -340,7 +354,7 @@ class Window(Frame):
                                     conjTempParameters = set (listTempParameters)
 
                                     if conjTempDescriptionParameters.issubset(conjTempParameters):
-                                        self.lista.insert(END,'Confirmación variables en parámetros')
+                                        self.lista.insert(END,' '.join(map(str, conjTempBlock)) + ' : '+ flagBlockES + ' Confirmación variables en parámetros')
                                         self.lista.itemconfigure(END, fg="#00aa00")
                                     else:
                                         self.lista.insert(END,'Inconsistencia en parámetros')
@@ -349,27 +363,36 @@ class Window(Frame):
                                     listTempDescriptionVersions = list(dicTempDescriptionVersions.keys())
                                     listTempVersions = list(dicTempVersions.keys())
                                     
-                                    lastVersion = listTempDescriptionVersions[len(listTempDescriptionVersions) - 1]
+                                    if len(listTempDescriptionVersions) == 0:
+                                        lastVersion = "vacio"
+                                    elif len(listTempDescriptionVersions) == 1:
+                                        lastVersion = listTempDescriptionVersions[0]
+                                    else:
+                                        lastVersion = listTempDescriptionVersions[len(listTempDescriptionVersions) - 1]
                                         
                                     if lastVersion != '1 0':
                                         str_match = [s for s in listTempVersions if lastVersion in s]
                                         if len(str_match) > 0:
                                             # insertamos variable de bloque ES
-                                            self.lista.insert(END,'confirmación en versión')
+                                            self.lista.insert(END,' '.join(map(str, conjTempBlock)) + ' : '+ flagBlockES + ' Confirmación en versión')
                                             self.lista.itemconfigure(END, fg="#00aa00")
                                         else:
-                                            self.lista.insert(END, 'no se encuentra versión')
+                                            self.lista.insert(END, 'No se encuentra versión')
                                             self.lista.itemconfigure(END, fg="#ff0000")    
                                     else:
                                         # insertamos variable de bloque ES
-                                        self.lista.insert(END,'confirmación versión inicial')
+                                        self.lista.insert(END,'Confirmación versión inicial')
                                         self.lista.itemconfigure(END, fg="#00aa00")
 
                         # limpiamos el diccionario temporal por bloque y sumamos 1 al contador de bloques
                         dicTempBlock.clear()
+                        dicTempVersions.clear()
 
                         listTempParameters.clear()
                         listTempDescriptionParameters.clear()
+
+                        listTempVersions.clear()
+                        listTempDescriptionVersions.clear()
 
                         countBlock += 1
 
@@ -384,126 +407,136 @@ class Window(Frame):
                             line = fp.readline()
                             countLine += 1
                             continue
-                        
-                        if conjBlockBody.issubset(conjBlock):
-                            #busco parametros
-                            listTempParameters = processLineFromConstToListSuffix(line,arroba,listTempParameters)
-                            #busco version
-                            dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
 
                         else:
-                            for listTarget in listOfLists:
-                                dicTempBlock = processLineFromListToDic(line,listTarget,dicTempBlock)
 
-                            conjBlock = set(dicTempBlock.keys())
+                            if switchAsOn == 'N':
 
-                            if conjBlockBody.issubset(conjBlock):
-                                #busco parametros
-                                listTempParameters = processLineFromConstToListSuffix(line,arroba,listTempParameters)
-                                #busco version
-                                dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
-                                #busco separador As
-                            #Descripcion
-                            else:
-                                #sss
+                                for listTarget in listOfLists:
+                                    dicTempBlock = processLineFromListToDic(line,listTarget,dicTempBlock)
+
                                 conjBlock = set(dicTempBlock.keys())
 
+                            ## si los elementos de body ya se encuentran en linea
+                            if conjBlockBody.issubset(conjBlock) and switchAsOn == 'S':
+                                
+                                #busco version
+                                dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
 
-                        indexLineComent = line.find(lineComment, 0)
-                        indexBlockComentOpen = line.find(blockCommentOpen, 0)
-                        indexExec = strippedLine.find(exec_, 0)
-                        indexBlockAsOpen = strippedLine.find(as_, 0)
-
-                        if indexBlockAsOpen > 0:
-                            indexPrefixAs = strippedLine.find(' ', indexBlockAsOpen - 1)
-                            indexSufixAs = strippedLine.find(' ', indexBlockAsOpen + 1)
-
-                            if len(strippedLine) == indexPrefixAs + 3:
-                                indexSufixAs = 0
-
-                        elif indexBlockAsOpen == 0:
-                            indexPrefixAs = 0
-                            indexSufixAs = 0
-
-                        """ if indexLineComent == 0 and (switchCommentOn == 'N' or switchAsOn == 'N'):
-                            #busco version
-                            dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
-                            line = fp.readline()
-                            countLine += 1
-                            continue """
-                        if indexLineComent >= 0:
-
-                            
-                            #busco version
-                            dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
-                            line = fp.readline()
-                            countLine += 1
-                            continue
-                        elif indexExec == 0:
-                            #busco version
-                            dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
-                            line = fp.readline()
-                            countLine += 1
-                            continue
-                        elif indexBlockComentOpen >= 0 or switchCommentOn == 'S':
-                            indexBlockComentClose = line.find(blockCommentClose, 0)
-                            conjSubBlock = set(dicTempDescriptions.keys())
-                            if indexBlockComentClose >= 0:
-                                if len(listTempDescriptionVersionsFull) == 0:
-                                    lastVersion = "vacio"
-                                elif len(listTempDescriptionVersionsFull) == 1:
-                                    lastVersion = listTempDescriptionVersionsFull[0]
-                                else:
-                                    lastVersion = listTempDescriptionVersionsFull[len(listTempDescriptionVersionsFull) - 1]
-                                self.lista.insert(END, lastVersion)
-                                self.lista.itemconfigure(END, fg="#00aa00")
-
-                                dicTempDescriptions.clear() 
-                                listTempDescriptionParametersFull.clear()#parametros :
-                                listTempDescriptionVersionsFull.clear()#lista de versiones
-                                switchCommentOn = 'N'
                             else:
-                                dicTempDescriptions = processLineFromListToDic(line,listConstantsDescriptions,dicTempDescriptions)
-                                
-                                if conjConstantsDescriptions.issubset(conjSubBlock):
-                                    # buscamos versiones en sub bloque descripciones
-                                    listTempDescriptionVersionsFull = processLineFromConstToListboth(line,space,listTempDescriptionVersionsFull)
-                                    dicTempDescriptionVersions = processLineFromConstToDic_ExtractVersions(line,space,dicTempDescriptionVersions)
+                            
+                                if conjBlockBody.issubset(conjBlock):
+                                    #busco parametros
+                                    listTempParameters = processLineFromConstToListSuffix(line,arroba,listTempParameters)
+                                    #busco version
+                                    dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
                                     
+                                #Descripcion
                                 else:
-                                    # buscamos parametros en sub bloque descripciones
-                                    listTempDescriptionParametersFull = processLineFromConstToListboth(line,dospuntos,listTempDescriptionParametersFull)
-                                    listTempDescriptionParameters = processLineFromConstToListSuffix(line,arroba,listTempDescriptionParameters)
+                                    #
+                                    indexLineComent = line.find(lineComment, 0)
+                                    indexBlockComentOpen = line.find(blockCommentOpen, 0)
+                                    indexExec = strippedLine.find(exec_, 0)
+                                    indexBlockAsOpen = strippedLine.find(as_, 0)
 
-                                switchCommentOn = 'S'
-                        
-                        elif (indexBlockAsOpen >= 0 or switchAsOn == 'S') and (indexPrefixAs >= 0 and indexSufixAs >= 0):
-                            
-                            if switchAsOn == 'N':
-                                for listTarget in listOfLists:
-                                    dicTempBlock = processLineFromListToDic(line,listTarget,dicTempBlock)  
-                                #busco parametros
-                                listTempParameters = processLineFromConstToListSuffix(line,arroba,listTempParameters)
-                                
-                            #busco version
-                            dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
-                            
-                            if indexBlockAsOpen > 0 and indexPrefixAs >= 0 and indexSufixAs >= 0:
-                                switchAsOn = 'S'
+                                    if indexBlockAsOpen > 0:
+                                        indexPrefixAs = strippedLine.find(' ', indexBlockAsOpen - 1, indexBlockAsOpen)
+                                        indexSufixAs = strippedLine.find(' ', indexBlockAsOpen + 1, indexBlockAsOpen)
 
-                            
+                                        if len(strippedLine) == indexPrefixAs + 3:
+                                            indexSufixAs = 0
 
-                        else:
-                                
-                            for listTarget in listOfLists:
-                                dicTempBlock = processLineFromListToDic(line,listTarget,dicTempBlock)
+                                    elif indexBlockAsOpen == 0:
+                                        indexPrefixAs = 0
+                                        indexSufixAs = 0
 
-                            conjBlock = set(dicTempBlock.keys())
-                            if switchAsOn == 'N' and conjBlockBody.issubset(conjBlock):
-                                #busco parametros
-                                listTempParameters = processLineFromConstToListSuffix(line,arroba,listTempParameters)
+                                    
+                                    if indexLineComent >= 0:
 
-                            switchAsOn = 'N'
+                                        if indexLineComent != 0:
+                                            #busco parametros
+                                            listTempParameters = processLineFromConstToListSuffix(line,arroba,listTempParameters)
+                                            
+                                        #busco version
+                                        dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
+                                        line = fp.readline()
+                                        countLine += 1
+                                        continue
+                                    elif indexExec == 0 and switchAsOn == 'S':
+                                        
+                                        #busco version
+                                        dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
+                                        line = fp.readline()
+                                        countLine += 1
+                                        continue
+                                    
+                                    elif indexBlockComentOpen >= 0 or switchCommentOn == 'S':
+                                        indexBlockComentClose = line.find(blockCommentClose, 0)
+                                        conjSubBlock = set(dicTempDescriptions.keys())
+                                        if indexBlockComentClose >= 0:
+                                            if len(listTempDescriptionVersionsFull) == 0:
+                                                lastVersion = "vacio"
+                                            elif len(listTempDescriptionVersionsFull) == 1:
+                                                lastVersion = listTempDescriptionVersionsFull[0]
+                                            else:
+                                                lastVersion = listTempDescriptionVersionsFull[len(listTempDescriptionVersionsFull) - 1]
+                                            #comentamos ultimaversion full
+                                            """ self.lista.insert(END, lastVersion)
+                                            self.lista.itemconfigure(END, fg="#00aa00") """
+
+                                            dicTempDescriptions.clear() 
+                                            listTempDescriptionParametersFull.clear()#parametros :
+                                            listTempDescriptionVersionsFull.clear()#lista de versiones
+                                            switchCommentOn = 'N'
+                                        else:
+                                            dicTempDescriptions = processLineFromListToDic(line,listConstantsDescriptions,dicTempDescriptions)
+                                            
+                                            if conjConstantsDescriptions.issubset(conjSubBlock):
+                                                # buscamos versiones en sub bloque descripciones
+                                                listTempDescriptionVersionsFull = processLineFromConstToListboth(line,space,listTempDescriptionVersionsFull)
+                                                dicTempDescriptionVersions = processLineFromConstToDic_ExtractVersions(line,space,dicTempDescriptionVersions)
+                                                
+                                            else:
+                                                # buscamos parametros en sub bloque descripciones
+                                                listTempDescriptionParametersFull = processLineFromConstToListboth(line,dospuntos,listTempDescriptionParametersFull)
+                                                listTempDescriptionParameters = processLineFromConstToListSuffix(line,arroba,listTempDescriptionParameters)
+
+                                            switchCommentOn = 'S'
+                                    
+                                    elif (indexBlockAsOpen >= 0 or switchAsOn == 'S') and (indexPrefixAs >= 0 and indexSufixAs >= 0):
+                                        
+                                        if switchAsOn == 'N':
+                                            for listTarget in listOfLists:
+                                                dicTempBlock = processLineFromListToDic(line,listTarget,dicTempBlock)  
+                                            #busco parametros
+                                            listTempParameters = processLineFromConstToListSuffix(line,arroba,listTempParameters)
+                                            
+                                        #busco version
+                                        dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
+                                        
+                                        if indexBlockAsOpen > 0 and indexPrefixAs >= 0 and indexSufixAs >= 0:
+                                            switchAsOn = 'S'
+
+                                        
+
+                                    else:
+                                        
+                                        """ conjBlock = set(dicTempBlock.keys())
+                                        if conjBlockBody.issubset(conjBlock):
+                                            #busco version
+                                            dicTempVersions = processLineFromConstToDic_SearchVersions(line,lineComment,dicTempVersions)
+                                        else:
+
+                                            for listTarget in listOfLists:
+                                                dicTempBlock = processLineFromListToDic(line,listTarget,dicTempBlock)
+
+                                        conjBlock = set(dicTempBlock.keys())
+                                        if switchAsOn == 'N' and conjBlockBody.issubset(conjBlock):
+                                            #busco parametros
+                                            listTempParameters = processLineFromConstToListSuffix(line,arroba,listTempParameters)
+                                        """
+
+                                        switchAsOn = 'N'
                             
                     # siguiente linea
                     line = fp.readline()
@@ -585,6 +618,16 @@ def processLineFromConstToListSuffix(line,const,listResult):
     #hacemos una busqueda de la constante que ingresa
     line = line.replace(':',' ')
     startPosition = line.find(const, 0)
+    """ if startPosition >= 0:
+        endPosition = line.find(space, startPosition)
+        objectsufijo_ = line[startPosition + 1 : endPosition].strip()
+        if startPosition == 1:
+            objectprefijo_ = line[0 : startPosition]
+        else:
+            objectprefijo_ = line[0 : startPosition - 1].strip()
+        object_ = const + objectsufijo_
+        object_ = " ".join(object_.split())
+        listResult.append(object_) """
 
     while startPosition >= 0:
         endPosition = line.find(space, startPosition)
